@@ -135,11 +135,14 @@ class AnomalyPatternService(BaseModuleService):
         # 写入质量事件记录
         incident_rows = store.rows("dq_incident")
         new_iid = max((int(r.get("id", 0)) for r in incident_rows), default=0) + 1
+        _now = datetime.now(timezone.utc)
         incident_rows.append({
             "id": new_iid,
             "事件编号": f"DQ_I-{new_iid:04d}",
             "关联规则": f"anomaly:{pattern.get('模式编号', '')}",
-            "触发时间": datetime.now(timezone.utc).isoformat(),
+            "发生时间": _now.isoformat(),
+            "接收时间": _now.isoformat(),
+            "触发时间": _now.isoformat(),
             "偏离程度": result["异常率"],
             "影响行数": str(anomaly_count),
             "严重级别": "warning" if anomaly_count > 5 else "info",

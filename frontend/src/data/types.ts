@@ -18,6 +18,8 @@ export type ModuleMeta = {
   actions: string[]
   actionTargets: Record<string, string>
   metrics: string[]
+  /** 列表筛选栏使用的字段；缺省取 fields 前三列。 */
+  filterFields?: string[]
 }
 
 export type PageResult = {

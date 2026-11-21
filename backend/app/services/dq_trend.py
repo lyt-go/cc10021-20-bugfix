@@ -111,11 +111,16 @@ class DqTrendService(BaseModuleService):
         """检测到质量下降趋势，写入质量事件并触发告警。"""
         incident_rows = store.rows("dq_incident")
         new_iid = max((int(r.get("id", 0)) for r in incident_rows), default=0) + 1
+        _now = datetime.now(timezone.utc)
         incident_rows.append({
             "id": new_iid,
             "事件编号": f"DQ_I-{new_iid:04d}",
             "关联规则": f"trend:{table_name}",
-            "触发时间": datetime.now(timezone.utc).isoformat(),
+            "发生时间": _now.isoformat(),
+            "接收时间": _now.isoformat(),
+            "触发时间": _now.isoformat(),
+            "目标表名": table_name,
+            "所属库名": "",
             "偏离程度": f"{abs(change_rate):.1f}%",
             "影响行数": "全局",
             "严重级别": "warning" if abs(change_rate) > 10 else "info",

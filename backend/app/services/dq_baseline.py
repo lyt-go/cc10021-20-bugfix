@@ -116,11 +116,16 @@ class DqBaselineService(BaseModuleService):
         if is_abnormal:
             incident_rows = store.rows("dq_incident")
             new_iid = max((int(r.get("id", 0)) for r in incident_rows), default=0) + 1
+            _now = datetime.now(timezone.utc)
             incident_rows.append({
                 "id": new_iid,
                 "事件编号": f"DQ_I-{new_iid:04d}",
                 "关联规则": f"baseline:{table_name}",
-                "触发时间": datetime.now(timezone.utc).isoformat(),
+                "发生时间": _now.isoformat(),
+                "接收时间": _now.isoformat(),
+                "触发时间": _now.isoformat(),
+                "目标表名": table_name,
+                "所属库名": "",
                 "偏离程度": max_deviation["偏离幅度"],
                 "影响行数": "待评估",
                 "严重级别": "warning",

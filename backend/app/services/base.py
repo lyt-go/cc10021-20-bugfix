@@ -10,10 +10,15 @@ class BaseModuleService:
     MODULE = ""
     ENTITY = ""
     LIST_FIELDS: list[str] = []
+    # 可参与筛选的字段，默认与展示列一致；模块可按需扩展（如事件的发生/接收时间、库表名）。
+    FILTER_FIELDS: list[str] = []
     REQUIRED_FIELDS: list[str] = []
     STATUS_ORDER: list[str] = []
     ACTION_RULES: dict[str, str] = {}
     NEGATIVE_ACTIONS: list[str] = []
+
+    def filter_fields(self) -> list[str]:
+        return list(self.FILTER_FIELDS or self.LIST_FIELDS)
 
     def list_entries(
         self,
@@ -25,8 +30,9 @@ class BaseModuleService:
         size: int = 20,
     ) -> tuple[list[dict[str, Any]], int]:
         rows = list(store.rows(self.MODULE))
+        filter_fields = self.filter_fields()
         for field, expected in (filters or {}).items():
-            if field in self.LIST_FIELDS:
+            if field in filter_fields:
                 rows = [
                     row for row in rows
                     if expected.casefold() in str(row.get(field, "")).casefold()

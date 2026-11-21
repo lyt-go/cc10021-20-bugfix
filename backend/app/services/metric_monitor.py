@@ -78,11 +78,16 @@ class MetricMonitorService(BaseModuleService):
         """写入质量事件记录，将指标异常事件关联到质量事件管理。"""
         incident_rows = store.rows("dq_incident")
         new_iid = max((int(r.get("id", 0)) for r in incident_rows), default=0) + 1
+        _now = datetime.now(timezone.utc)
         incident_rows.append({
             "id": new_iid,
             "事件编号": f"DQ_I-{new_iid:04d}",
             "关联规则": f"metric_monitor:{table_name}.{metric_field}",
-            "触发时间": datetime.now(timezone.utc).isoformat(),
+            "发生时间": _now.isoformat(),
+            "接收时间": _now.isoformat(),
+            "触发时间": _now.isoformat(),
+            "目标表名": table_name,
+            "所属库名": "",
             "偏离程度": metric_result["波动幅度"],
             "影响行数": str(random.randint(1000, 500000)),
             "严重级别": metric_result.get("告警级别", "warning"),

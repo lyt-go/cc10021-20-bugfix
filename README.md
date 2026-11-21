@@ -52,7 +52,7 @@ npm run dev
 | --- | --- | --- | --- |
 | 质量规则定义 | `dq_rule_def` | 质量规则 | 规则编号、规则名称、目标表名 |
 | 巡检任务管理 | `dq_check_run` | 巡检任务 | 任务编号、关联规则集、数据范围 |
-| 质量事件管理 | `dq_incident` | 质量事件 | 事件编号、关联规则、触发时间 |
+| 质量事件管理 | `dq_incident` | 质量事件 | 事件编号、关联规则、发生时间/接收时间 |
 | 元数据采集器 | `metadata_crawler` | 采集器配置 | 采集器编号、数据源类型、连接地址 |
 | 数据表目录 | `table_catalog` | 表目录 | 表编号、表名称、所属库名 |
 | 字段画像分析 | `column_profile` | 字段画像 | 画像编号、关联表名、字段名称 |
@@ -69,6 +69,29 @@ npm run dev
 | 主数据实体注册 | `mdm_entity` | 主数据实体 | 实体编号、实体名称、业务域 |
 | 质量趋势看板 | `dq_trend` | 趋势记录 | 记录编号、目标表名、日期 |
 
+## 质量日报取数口径
+
+质量事件同时有“发生时间”和“接收时间”：跨日补入的事件按**发生时间**归入业务自然日，
+不会因为今天才收到就算进今天。库表按**库名 + 表名精确匹配**，同名表不跨库串数据；
+同一事件编号的并发更正只计一次（保留接收时间最新的一条，并记录被合并的记录）。
+库表身份不完整的旧记录进入“待核对”，不参与确认统计；历史记录兼容 `触发时间` 单时间来源，
+也能从 `trend:db.table` 这类关联规则前缀还原身份。
+
+```bash
+# 生成某天日报（先落窗口快照，再回写派工清单）
+curl -X POST "http://127.0.0.1:8000/api/quality-daily/generate?report_date=2026-11-20&db_name=order_db&table_name=ods_order_info"
+# 报告入口 / 窗口明细 / 事件详情 / 派工清单
+curl "http://127.0.0.1:8000/api/quality-daily/reports/4"
+curl "http://127.0.0.1:8000/api/quality-daily/snapshots/DQ_W-0001"
+curl "http://127.0.0.1:8000/api/quality-daily/incidents/DQ_I-0004"
+curl -X POST "http://127.0.0.1:8000/api/quality-daily/dispatches/claim?reference=DQ_R-0004"
+# 通用列表也支持按窗口取数
+curl "http://127.0.0.1:8000/api/dq_incident?窗口日期=2026-11-20"
+```
+
+日报的统计数字全部来自 `dq_report_snapshot` 里的同一份窗口明细，报告入口、事件详情和
+派工清单共用 `窗口快照编号`，可以逐条核对某条事件归入了哪一天。
+
 ## 约定
 
 - 全部模块共享`frontend/src/views/WorkbenchView.vue|tsx`和一套资源路由。
@@ -76,6 +99,8 @@ npm run dev
   `frontend/src/domain/<模块>.ts`，用于承载真实业务差异并维持36题位容量。
 - 列表接口统一返回 `{ items, total, page, size }`，动作接口统一返回 `{ ok, message }`。
 - 状态流转只允许在 `app/services` 里改，路由层不做业务判断。
+- 模块可在 `FILTER_FIELDS` 里声明额外筛选字段；质量事件的时间/库表筛选走
+  `backend/app/services/incident_window.py` 的窗口口径，不在路由层拼条件。
 
 领域：数据工程
 子方向：数仓与数据湖
